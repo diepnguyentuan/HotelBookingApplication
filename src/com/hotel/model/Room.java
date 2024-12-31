@@ -1,10 +1,14 @@
 package com.hotel.model;
 
+import java.time.LocalDateTime;
+
 public class Room {
     private int roomNo;
     private String typeRoom;
     private boolean available;
     private double price;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
 
     public Room(int roomNo, String typeRoom, double price, boolean available) {
         this.roomNo = roomNo;
@@ -37,8 +41,21 @@ public class Room {
     public void setAvailable(boolean available) {
         this.available = available;
     }
+    public LocalDateTime getStartTime() {
+        return startTime;
+    }
+    public void setStartTime(LocalDateTime startTime) {
+        this.startTime = startTime;
+    }
+    public LocalDateTime getEndTime() {
+        return endTime;
+    }
+    public void setEndTime(LocalDateTime endTime) {
+        this.endTime = endTime;
+    }
     @Override
     public String toString() {
-        return "roomNo=" + roomNo + ", typeRoom=" + typeRoom + ", available=" + available + ", price=" + price;
+        return String.format("| %-15d | %-15s | %-17s | %-13.2f |%n",
+                roomNo, typeRoom, available ? "Yes" : "No", price);
     }
 }

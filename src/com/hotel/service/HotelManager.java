@@ -3,16 +3,19 @@ package com.hotel.service;
 import com.hotel.model.Customer;
 import com.hotel.model.Room;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.*;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.*;
 
 public class HotelManager {
     private Map<String, Customer> customers;
     private List<Room> rooms;
     private Customer currentCustomer;
-
+    Scanner scanner = new Scanner(System.in);
     public Customer getCurrentCustomer() {
         return currentCustomer;
     }
@@ -44,9 +47,16 @@ public class HotelManager {
     }
     public void showAvailableRooms() {
         boolean found = false;
+        System.out.format("+-----------------+-----------------+-------------------+-----------------+%n");
+        System.out.format("|   Room Number   |    Type Room    |      Available    |      Price      |%n");
+        System.out.format("|=========================================================================|%n");
+
         for (Room room : rooms) {
             if (room.isAvailable()) {
-                System.out.println(room);
+                System.out.format("| %-15d | %-15s | %-17s | %-10.2f $/day|%n",
+                        room.getRoomNo(), room.getTypeRoom(),
+                        room.isAvailable() ? "Yes" : "No", room.getPrice());
+                System.out.format("+-----------------+-----------------+-------------------+-----------------+%n");
                 found = true;
             }
         }
@@ -55,12 +65,22 @@ public class HotelManager {
         }
     }
     public void bookRoom(int roomNumber) {
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         for (Room room : rooms) {
             if (room.getRoomNo() == roomNumber) {
                 if (room.isAvailable()) {
                     room.setAvailable(false);
-                    currentCustomer.bookRoom(roomNumber);
-                    System.out.println("Room " + roomNumber + " booked");
+                    System.out.println("Please enter date to book room(dd/MM/yyyy): ");
+                    String checkinTime = scanner.nextLine();
+                    try {
+                        LocalDate checkin = LocalDate.parse(checkinTime, dtf);
+                        LocalDateTime checkinDateTime = checkin.atStartOfDay();
+                        room.setStartTime(checkinDateTime);
+                        currentCustomer.bookRoom(roomNumber);
+                        System.out.println("Room " + roomNumber + " booked - in " + dtf.format(checkin));
+                    }catch (Exception e){
+                        System.out.println("Invalid Time format");
+                    }
                 }else {
                     System.out.println("Room " + roomNumber + " not booked");
                 }
@@ -97,25 +117,76 @@ public class HotelManager {
             }
         }
     }
-    public void checkoutRoom() {
-        if (currentCustomer == null) {
-            System.out.println("Please login first");
-        }
-        double totalCost = 0.0;
-        List<Integer> listRooms = currentCustomer.getBookedRooms();
-        if(listRooms.isEmpty()) {
-            System.out.println("No booked rooms");
-        }
-        for(int roomNumber : listRooms){
-            Room room = findRoom(roomNumber);
-            if (room != null) {
-                System.out.println("Room " + room.getRoomNo() + " (" + room.getTypeRoom() + ") " + room.getPrice());
-                totalCost += room.getPrice();
-                room.setAvailable(true);
+    public void checkoutRoom(String outputFilePath) {
+        try (BufferedWriter br = new BufferedWriter(new FileWriter(outputFilePath, true))) {
+            if (currentCustomer == null) {
+                String outputLine = "Please login first";
+                System.out.println(outputLine);
+                br.write(outputLine);
+                br.newLine();
+                return;
             }
+            double totalCost = 0.0;
+            List<Integer> listRooms = currentCustomer.getBookedRooms();
+            if (listRooms.isEmpty()) {
+                String outputLine = "No booked rooms";
+                System.out.println(outputLine);
+                br.write(outputLine);
+                br.newLine();
+                return;
+            }
+            br.write("----Checkout information----");
+            br.newLine();
+            br.write("Name of Customer: " + currentCustomer.getName());
+            br.newLine();
+            DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            for (int roomNumber : listRooms) {
+                Room room = findRoom(roomNumber);
+                if (room != null) {
+                    LocalDate checkOutDate;
+                    while (true) {
+                        System.out.println("Enter check-out date (dd/MM/yyyy):");
+                        String checkOutDateString = scanner.nextLine();
+                        try {
+                            checkOutDate = LocalDate.parse(checkOutDateString, dtf);
+                            if(checkOutDate.isBefore(room.getStartTime().toLocalDate()) ||
+                                    checkOutDate.isEqual(room.getStartTime().toLocalDate())){
+                                System.out.println("Check-out date must be after check-in date. Please try again.");
+                                continue;
+                            }
+                            break;
+
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format. Please use dd/MM/yyyy.");
+                        }
+                    }
+                    LocalDateTime checkOutDateTime = checkOutDate.atStartOfDay();
+                    room.setEndTime(checkOutDateTime);// Set check-out time
+                    Duration duration = Duration.between(room.getStartTime(), room.getEndTime());
+                    long days = duration.toDays();
+                    double roomCost = room.getPrice() * (days > 0 ? days : 1);
+                    String outputLine = "Room " + room.getRoomNo() + " (" + room.getTypeRoom() + ") " + room.getPrice() + "/day: " + roomCost + "$";
+                    System.out.println(outputLine);
+                    br.write(outputLine);
+                    br.newLine();
+                    br.write("Check-in date: " + dtf.format(room.getStartTime().toLocalDate()));//In ra LocalDate
+                    br.newLine();
+                    br.write("Check-out date: " + dtf.format(room.getEndTime().toLocalDate()));//In ra LocalDate
+                    br.newLine();
+                    totalCost += roomCost;
+                    room.setAvailable(true);
+                }
+            }
+            String outputLineTotal = "Total cost: " + totalCost + " $";
+            br.write(outputLineTotal);
+            br.newLine();
+            br.write("--------------------------");
+            br.newLine();
+            currentCustomer.getBookedRooms().clear();
+        } catch (IOException e) {
+            System.out.println("error");
+            e.printStackTrace();
         }
-        System.out.println("Total cost: " + totalCost);
-        currentCustomer.getBookedRooms().clear();
     }
     private Room findRoom(int roomNumber) {
         for (Room room : rooms) {

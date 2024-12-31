@@ -1,0 +1,14 @@
+----Checkout information----
+Name of Customer: diep
+Room 101 (Single) 100.0/day: 200.0$
+Check-in date: 12/10/2024
+Check-out date: 14/10/2024
+Total cost: 200.0
+--------------------------
+----Checkout information----
+Name of Customer: diep
+Room 101 (Single) 100.0/day: 100.0$
+Check-in date: 12/10/2024
+Check-out date: 13/10/2024
+Total cost: 100.0
+--------------------------

@@ -44,7 +44,8 @@ public class Main {
                     hotelManager.viewBookedRooms();
                     break;
                 case 5:
-                    hotelManager.checkoutRoom();
+                    String outputFilePath = "checkout_log.txt";
+                    hotelManager.checkoutRoom(outputFilePath);
                     break;
                 case 6:
                     hotelManager.logout();
