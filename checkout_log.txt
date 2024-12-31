@@ -12,3 +12,5 @@ Check-in date: 12/10/2024
 Check-out date: 13/10/2024
 Total cost: 100.0
 --------------------------
+No booked rooms
+No booked rooms

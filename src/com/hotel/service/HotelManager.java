@@ -16,9 +16,11 @@ public class HotelManager {
     private List<Room> rooms;
     private Customer currentCustomer;
     Scanner scanner = new Scanner(System.in);
+
     public Customer getCurrentCustomer() {
         return currentCustomer;
     }
+
     public HotelManager() {
         customers = new HashMap<>();
         rooms = new ArrayList<>();
@@ -31,20 +33,23 @@ public class HotelManager {
 
         customers.put("diep", new Customer("diep"));
     }
+
     public void loginCustomer(String name) {
         if (customers.containsKey(name)) {
             currentCustomer = customers.get(name);
             System.out.println("Customer is already registered: " + currentCustomer.getName());
-        }else{
+        } else {
             currentCustomer = new Customer(name);
             customers.put(name, currentCustomer);
             System.out.println("Customer is registered: " + currentCustomer.getName());
         }
     }
-    public void logout(){
+
+    public void logout() {
         currentCustomer = null;
         System.out.println("Customer has been logged out");
     }
+
     public void showAvailableRooms() {
         boolean found = false;
         System.out.format("+-----------------+-----------------+-------------------+-----------------+%n");
@@ -64,24 +69,35 @@ public class HotelManager {
             System.out.println("No rooms available");
         }
     }
+
     public void bookRoom(int roomNumber) {
         DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd/MM/yyyy");
         for (Room room : rooms) {
             if (room.getRoomNo() == roomNumber) {
                 if (room.isAvailable()) {
-                    room.setAvailable(false);
-                    System.out.println("Please enter date to book room(dd/MM/yyyy): ");
-                    String checkinTime = scanner.nextLine();
-                    try {
-                        LocalDate checkin = LocalDate.parse(checkinTime, dtf);
-                        LocalDateTime checkinDateTime = checkin.atStartOfDay();
-                        room.setStartTime(checkinDateTime);
-                        currentCustomer.bookRoom(roomNumber);
-                        System.out.println("Room " + roomNumber + " booked - in " + dtf.format(checkin));
-                    }catch (Exception e){
-                        System.out.println("Invalid Time format");
+                    LocalDate checkinDate = null;
+                    while (true) {
+                        System.out.println("Please enter date to book room(dd/MM/yyyy): ");
+                        String checkinTime = scanner.nextLine();
+
+                        try {
+                            checkinDate = LocalDate.parse(checkinTime, dtf);
+                            LocalDate today = LocalDate.now();
+                            if (checkinDate.isBefore(today)) {
+                                System.out.println("Checkin date must not before today");
+                                continue;
+                            }
+                            break;
+                        } catch (DateTimeParseException e) {
+                            System.out.println("Invalid date format");
+                        }
                     }
-                }else {
+                    LocalDateTime checkinDateTime = checkinDate.atStartOfDay();
+                    room.setStartTime(checkinDateTime);
+                    currentCustomer.bookRoom(roomNumber);
+                    room.setAvailable(false);
+                    System.out.println("Room " + roomNumber + " booked - in " + dtf.format(checkinDate));
+                } else {
                     System.out.println("Room " + roomNumber + " not booked");
                 }
                 return;
@@ -89,22 +105,24 @@ public class HotelManager {
         }
         System.out.println("Room " + roomNumber + " does not exist");
     }
+
     public void cancelRoom(int roomNumber) {
         if (currentCustomer.getBookedRooms().contains(roomNumber)) {
             for (Room room : rooms) {
                 if (room.getRoomNo() == roomNumber) {
                     room.setAvailable(true);
-                    currentCustomer.bookRoom(roomNumber);
+                    currentCustomer.cancelRoom(roomNumber);
                     System.out.println("Room " + roomNumber + " has been cancelled successfully");
                 }
             }
-        }else {
+        } else {
             System.out.println("You do not have booked rooms");
         }
     }
+
     public void viewBookedRooms() {
         List<Integer> bookedRooms = currentCustomer.getBookedRooms();
-        if(bookedRooms.isEmpty()) {
+        if (bookedRooms.isEmpty()) {
             System.out.println("No booked rooms");
         } else {
             System.out.println("Your booked rooms are: ");
@@ -117,7 +135,9 @@ public class HotelManager {
             }
         }
     }
+
     public void checkoutRoom(String outputFilePath) {
+        List<Integer> listRooms = currentCustomer.getBookedRooms();
         try (BufferedWriter br = new BufferedWriter(new FileWriter(outputFilePath, true))) {
             if (currentCustomer == null) {
                 String outputLine = "Please login first";
@@ -127,15 +147,12 @@ public class HotelManager {
                 return;
             }
             double totalCost = 0.0;
-            List<Integer> listRooms = currentCustomer.getBookedRooms();
+
             if (listRooms.isEmpty()) {
-                String outputLine = "No booked rooms";
-                System.out.println(outputLine);
-                br.write(outputLine);
-                br.newLine();
+                System.out.println("No booked rooms");
                 return;
             }
-            br.write("----Checkout information----");
+            br.write("---------------Checkout information----");
             br.newLine();
             br.write("Name of Customer: " + currentCustomer.getName());
             br.newLine();
@@ -149,8 +166,8 @@ public class HotelManager {
                         String checkOutDateString = scanner.nextLine();
                         try {
                             checkOutDate = LocalDate.parse(checkOutDateString, dtf);
-                            if(checkOutDate.isBefore(room.getStartTime().toLocalDate()) ||
-                                    checkOutDate.isEqual(room.getStartTime().toLocalDate())){
+                            if (checkOutDate.isBefore(room.getStartTime().toLocalDate()) ||
+                                    checkOutDate.isEqual(room.getStartTime().toLocalDate())) {
                                 System.out.println("Check-out date must be after check-in date. Please try again.");
                                 continue;
                             }
@@ -161,7 +178,7 @@ public class HotelManager {
                         }
                     }
                     LocalDateTime checkOutDateTime = checkOutDate.atStartOfDay();
-                    room.setEndTime(checkOutDateTime);// Set check-out time
+                    room.setEndTime(checkOutDateTime);
                     Duration duration = Duration.between(room.getStartTime(), room.getEndTime());
                     long days = duration.toDays();
                     double roomCost = room.getPrice() * (days > 0 ? days : 1);
@@ -188,6 +205,7 @@ public class HotelManager {
             e.printStackTrace();
         }
     }
+
     private Room findRoom(int roomNumber) {
         for (Room room : rooms) {
             if (room.getRoomNo() == roomNumber) {
